@@ -5,6 +5,8 @@ import net.engineeringdigest.journalApp.entity.JournalEntry;
 import net.engineeringdigest.journalApp.service.JournalEntryService;
 import org.bson.types.ObjectId;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
@@ -21,45 +23,91 @@ public class journalEntryControllerV2 {
     private JournalEntryService journalEntryService;
 
 
+//    @GetMapping
+//    public List<JournalEntry> getJournalEntries() {
+//        return journalEntryService.getJournalEntries();
+//    }
+
     @GetMapping
-    public List<JournalEntry> getJournalEntries() {
-        return journalEntryService.getJournalEntries();
+    public ResponseEntity<?> getJournalEntries() {
+        List<JournalEntry> val = journalEntryService.getJournalEntries();
+        if(val.isEmpty())
+        {
+            return new ResponseEntity<>(HttpStatus.NO_CONTENT);
+        }
+        else
+        {
+            return new ResponseEntity<>(val, HttpStatus.OK);
+        }
     }
 
     @PostMapping
-    public boolean addJournalEntry(@RequestBody JournalEntry myEntry) {
-        myEntry.setCreated(LocalDate.now());
-        journalEntryService.saveEntry(myEntry);
-        return true;
+    public ResponseEntity<?> addJournalEntry(@RequestBody JournalEntry myEntry) {
+        try{
+            myEntry.setCreated(LocalDate.now());
+            journalEntryService.saveEntry(myEntry);
+            return new ResponseEntity<>(myEntry, HttpStatus.CREATED);
+        }
+        catch(Exception e)
+        {
+            return new ResponseEntity<>("So there was an error during the posting please bearing with us while we look to fix it", HttpStatus.INTERNAL_SERVER_ERROR);
+        }
     }
 
     @GetMapping("id/{myId}")
-    public JournalEntry getEntryById(@PathVariable ObjectId myId) {
-        return journalEntryService.getJournalEntryByID(myId);
+    public ResponseEntity<?> getEntryById(@PathVariable ObjectId myId) {
+        JournalEntry val = journalEntryService.getJournalEntryByID(myId);
+        if(val==null)
+        {
+            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+        }
+        else
+        {
+            return new ResponseEntity<>(val, HttpStatus.OK);
+        }
     }
 
     @DeleteMapping("id/{myId}")
-    public String deleteEntryById(@PathVariable ObjectId myId) {
-        journalEntryService.deleteJournalEntry(myId);
-        return "Deleted of the ID " + myId +" from the journal entry is successful";
-    }
+    public ResponseEntity<?> deleteEntryById(@PathVariable ObjectId myId) {
+        JournalEntry val = journalEntryService.getJournalEntryByID(myId);
 
-    @PutMapping("id/{myId}")
-    public boolean updateEntryById(@PathVariable ObjectId myId, @RequestBody JournalEntry myEntry) {
-        JournalEntry oldEntry = journalEntryService.getJournalEntryByID(myId);
-        if(oldEntry!=null)
+        if(val==null)
         {
-            if(myEntry.content!=null && !myEntry.content.isEmpty())
-            {
-                oldEntry.setTitle(myEntry.content );
-            }
-            if(myEntry.title!=null && !myEntry.title.isEmpty())
-            {
-                oldEntry.setTitle(myEntry.title);
-            }
-            oldEntry.setModified(LocalDate.now());
+            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+        }
+        else
+        {
+            journalEntryService.deleteJournalEntry(myId);
+            return new ResponseEntity<>("Deleted of the ID " + myId +" from the journal entry is successful", HttpStatus.GONE);
+
+        }
+    }
+    @PutMapping("id/{myId}")
+    public ResponseEntity<String> updateEntryById(@PathVariable ObjectId myId, @RequestBody JournalEntry myEntry) {
+        JournalEntry oldEntry = journalEntryService.getJournalEntryByID(myId);
+
+        if (oldEntry == null) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Journal entry not found");
         }
 
-        return true;
+        boolean updated = false;
+
+        if (myEntry.getContent() != null && !myEntry.getContent().isEmpty()) {
+            oldEntry.setContent(myEntry.getContent());
+            updated = true;
+        }
+
+        if (myEntry.getTitle() != null && !myEntry.getTitle().isEmpty()) {
+            oldEntry.setTitle(myEntry.getTitle());
+            updated = true;
+        }
+
+        if (updated) {
+            oldEntry.setModified(LocalDate.now());
+            return ResponseEntity.ok("Journal entry updated successfully");
+        } else {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("No valid fields to update");
+        }
     }
+
 }
