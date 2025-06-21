@@ -1,6 +1,5 @@
 package net.engineeringdigest.journalApp.controller;
 
-import com.fasterxml.jackson.module.paramnames.ParameterNamesModule;
 import net.engineeringdigest.journalApp.entity.JournalEntry;
 import net.engineeringdigest.journalApp.service.JournalEntryService;
 import org.bson.types.ObjectId;
@@ -11,9 +10,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 @RestController
 @RequestMapping("/journal")
@@ -22,67 +19,70 @@ public class journalEntryControllerV2 {
     @Autowired
     private JournalEntryService journalEntryService;
 
-
-//    @GetMapping
-//    public List<JournalEntry> getJournalEntries() {
-//        return journalEntryService.getJournalEntries();
-//    }
-
     @GetMapping
     public ResponseEntity<?> getJournalEntries() {
         List<JournalEntry> val = journalEntryService.getJournalEntries();
-        if(val.isEmpty())
-        {
+        if (val.isEmpty()) {
             return new ResponseEntity<>(HttpStatus.NO_CONTENT);
-        }
-        else
-        {
+        } else {
             return new ResponseEntity<>(val, HttpStatus.OK);
+        }
+    }
+
+    @GetMapping("/listofID")
+    public ResponseEntity<?> getJournalEntriesID() {
+        List<JournalEntry> val = journalEntryService.getJournalEntries();
+        if (val.isEmpty()) {
+            return new ResponseEntity<>(HttpStatus.NO_CONTENT);
+        } else {
+            List<ObjectId> ids = new ArrayList<>();
+            for (JournalEntry entry : val) {
+                ids.add(entry.getId());
+            }
+            return new ResponseEntity<>(ids, HttpStatus.OK);
         }
     }
 
     @PostMapping
     public ResponseEntity<?> addJournalEntry(@RequestBody JournalEntry myEntry) {
-        try{
+        try {
             myEntry.setCreated(LocalDate.now());
             journalEntryService.saveEntry(myEntry);
             return new ResponseEntity<>(myEntry, HttpStatus.CREATED);
-        }
-        catch(Exception e)
-        {
-            return new ResponseEntity<>("So there was an error during the posting please bearing with us while we look to fix it", HttpStatus.INTERNAL_SERVER_ERROR);
+        } catch (Exception e) {
+            e.printStackTrace(); // Optional: log to logger
+            return new ResponseEntity<>(
+                    "There was an error while posting your journal entry. Please bear with us as we work to fix it.",
+                    HttpStatus.INTERNAL_SERVER_ERROR
+            );
         }
     }
 
-    @GetMapping("id/{myId}")
+    @GetMapping("/id/{myId}")
     public ResponseEntity<?> getEntryById(@PathVariable ObjectId myId) {
         JournalEntry val = journalEntryService.getJournalEntryByID(myId);
-        if(val==null)
-        {
+        if (val == null) {
             return new ResponseEntity<>(HttpStatus.NOT_FOUND);
-        }
-        else
-        {
+        } else {
             return new ResponseEntity<>(val, HttpStatus.OK);
         }
     }
 
-    @DeleteMapping("id/{myId}")
+    @DeleteMapping("/id/{myId}")
     public ResponseEntity<?> deleteEntryById(@PathVariable ObjectId myId) {
         JournalEntry val = journalEntryService.getJournalEntryByID(myId);
-
-        if(val==null)
-        {
+        if (val == null) {
             return new ResponseEntity<>(HttpStatus.NOT_FOUND);
-        }
-        else
-        {
+        } else {
             journalEntryService.deleteJournalEntry(myId);
-            return new ResponseEntity<>("Deleted of the ID " + myId +" from the journal entry is successful", HttpStatus.GONE);
-
+            return new ResponseEntity<>(
+                    "Successfully deleted journal entry with ID: " + myId,
+                    HttpStatus.GONE
+            );
         }
     }
-    @PutMapping("id/{myId}")
+
+    @PutMapping("/id/{myId}")
     public ResponseEntity<String> updateEntryById(@PathVariable ObjectId myId, @RequestBody JournalEntry myEntry) {
         JournalEntry oldEntry = journalEntryService.getJournalEntryByID(myId);
 
@@ -104,10 +104,10 @@ public class journalEntryControllerV2 {
 
         if (updated) {
             oldEntry.setModified(LocalDate.now());
+            journalEntryService.saveEntry(oldEntry); // ✅ Save after update
             return ResponseEntity.ok("Journal entry updated successfully");
         } else {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("No valid fields to update");
         }
     }
-
 }

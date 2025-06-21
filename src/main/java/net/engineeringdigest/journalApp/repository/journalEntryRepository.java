@@ -9,6 +9,3 @@ import org.springframework.stereotype.Component;
 public interface journalEntryRepository extends MongoRepository<JournalEntry, ObjectId> {
 
 }
-
-//mongo repo is already presented interface that performs the basic crud opreration
-// controller ---> service ---> repository (which uses interface)

@@ -27,7 +27,7 @@ public class journalEntryController {
 
     @PostMapping
     public boolean addJournalEntry(@RequestBody JournalEntry myEntry) {
-        journalEntries.put(myEntry.getId(),myEntry);
+        journalEntries.put(myEntry.id,myEntry);
         return true;
     }
 
